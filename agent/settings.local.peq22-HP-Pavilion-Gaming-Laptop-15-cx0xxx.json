@@ -1,5 +1,5 @@
 {
   "defaultProvider": "opencode-go",
-  "defaultModel": "kimi-k2.6",
+  "defaultModel": "deepseek-v4-flash",
   "lastChangelogVersion": "0.84.4"
 }
