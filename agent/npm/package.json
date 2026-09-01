@@ -2,6 +2,7 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
+    "@beyona/pi-zai-usage": "^1.1.0",
     "@gotgenes/pi-anthropic-auth": "^2.0.6",
     "pi-caveman": "^1.0.8"
   }

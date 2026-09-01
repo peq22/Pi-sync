@@ -2,7 +2,8 @@
   "theme": "dark",
   "packages": [
     "npm:@gotgenes/pi-anthropic-auth",
-    "npm:pi-caveman"
+    "npm:pi-caveman",
+    "npm:@beyona/pi-zai-usage"
   ],
   "hideThinkingBlock": false
 }
