@@ -67,22 +67,12 @@ Install as usual with `pi install npm:...`. That writes the package into
 
 ## Setting up a NEW machine
 ```bash
-# 1. dedicated, repo-scoped deploy key
-ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_pisync -N "" -C "pisync-deploy-$(hostname -s)"
-cat >> ~/.ssh/config <<'EOF'
-
-Host github-pisync
-    HostName github.com
-    User git
-    IdentityFile ~/.ssh/id_ed25519_pisync
-    IdentitiesOnly yes
-EOF
-cat ~/.ssh/id_ed25519_pisync.pub
-#   -> add this at: https://github.com/brunny95/Pi-sync/settings/keys
-#      "Add deploy key", title = hostname, TICK "Allow write access"
+# 1. authenticate (HTTPS + gh; login as peq22, browser device flow)
+gh auth login --hostname github.com --git-protocol https
+gh auth setup-git       # wires gh's credential helper into git
 
 # 2. clone + activate
-git clone git@github-pisync:brunny95/Pi-sync.git ~/pi-config
+git clone https://github.com/peq22/Pi-sync.git ~/pi-config
 ~/pi-config/sync.sh          # links config, creates settings.local.<hostname>.json from example
 
 # 3. set this machine's defaults, then re-sync
@@ -90,6 +80,18 @@ $EDITOR ~/pi-config/agent/settings.local.$(hostname -s).json   # defaultProvider
 ~/pi-config/sync.sh
 
 # 4. start pi and log in once (creates local auth.json)
+```
+
+`gh` is not installed by default on Ubuntu. One-time install (Ubuntu official repo):
+```bash
+sudo apt-get update
+sudo apt-get install -y wget
+sudo mkdir -p -m 755 /etc/apt/keyrings
+wget -qO- https://cli.github.com/packages/github.key | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null
+sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y gh
 ```
 
 ## What is / isn't synced
@@ -121,9 +123,14 @@ git rebase --continue
 ```
 
 ## Troubleshooting
-- **`Permission denied (publickey)`** → deploy key missing/not write-enabled on
-  this machine. Re-check `https://github.com/brunny95/Pi-sync/settings/keys`.
-  Test with: `ssh -T git@github-pisync` (expect "Hi brunny95/Pi-sync!").
+- **Push fails with `Authentication failed` / `could not read Username`** →
+  gh token missing/stale on this machine. Check `gh auth status`, re-login with
+  `gh auth login --hostname github.com --git-protocol https`, then `gh auth setup-git`.
+- **`gh` not found** → install it (see Ubuntu repo step above).
+- **git ignores gh's helper** → check `git config --get credential.helper` says
+  `!f() { gh auth git-credential ... }`; re-run `gh auth setup-git` if not.
+- **Repo moved / wrong remote** → confirm remote points at your fork:
+  `git -C ~/pi-config remote get-url origin` should be `https://github.com/peq22/Pi-sync.git`.
 - **pi doesn't pick up a change** → run `./sync.sh`. For everything except
   `settings.json`, confirm the file is a symlink: `ls -l ~/.pi/agent/<file>`.
   `settings.json` is generated (not a symlink) — its sources are
@@ -133,7 +140,8 @@ git rebase --continue
   `~/.pi/agent/<name>.bak.<timestamp>` the first time linking runs.
 
 ## Security notes
-- Access is via a **deploy key scoped to only this repo** (not an account key),
-  so a leak can't touch your other GitHub repos. Each machine has its own key.
+- Access is via your **GitHub account token** (HTTPS + gh). It can touch
+  anything your account can — keep that token safe (`gh auth status` shows
+  scopes). Revoke in GitHub → Settings → Developer settings.
 - Keep the GitHub repo **private**. Secrets are gitignored, but private is the
   belt-and-suspenders default.
